@@ -1,5 +1,5 @@
 const LaunchDarkly = require("launchdarkly-node-server-sdk");
-const client = LaunchDarkly.init("sdk-c46b880d-5973-48ed-9f01-838029b10e99");
+const client = LaunchDarkly.init("my-sdk-key");
 
 exports.handler = async (event) => {
   const s3url =
