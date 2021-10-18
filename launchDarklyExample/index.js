@@ -2,15 +2,17 @@ const LaunchDarkly = require("launchdarkly-node-server-sdk");
 const client = LaunchDarkly.init("my-sdk-key");
 
 exports.handler = async (event) => {
-  const s3url =
-    "http://launchdarkly-example.s3-website-us-east-1.amazonaws.com";
-
+  const request = event.Records[0].cf.request;
+  const hostURL = request.headers.host[0].value;
+  // all our files are under /site
+  const URI = request.uri.replace("/site", "");
   await client.waitForInitialization();
-  let landingPage = await client.variation(
+  const landingPage = await client.variation(
     "rebrand",
-    { key: event.Records[0].cf.request.clientIp },
+    { key: request.clientIp },
     false
   );
+  const URL = hostURL + landingPage + URI;
   return {
     status: "302",
     statusDescription: "Found",
@@ -18,7 +20,7 @@ exports.handler = async (event) => {
       location: [
         {
           key: "Location",
-          value: s3url + landingPage,
+          value: URL,
         },
       ],
     },
