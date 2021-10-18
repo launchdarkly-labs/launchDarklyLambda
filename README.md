@@ -17,6 +17,19 @@ Within AWS, we'll need to create two different resources to complete this challe
 1. **An S3 Bucket** – This will house our simple "web site." The site has an index page in the root as well as a `/beta` folder that contains the same. page with the new branding. Once the challenge is complete, users will either be directed to the old site or the new site depending on which variation they are assigned to within LaunchDarkly. LaunchDarkly determines this by assigning each unique user (identified by their key in this scenario) according to the percentage rollout we'll define.
 2. **A CloudFront Distribution** – This is required to run a Lambda function via AWS's edge servers (i.e. Lambda@Edge). Since the goal of this challenge is to redirect users to the proper site, this is better done "at the edge" so as to limit any latency the user might see during the request. Rather than intercept the request on the server and do a server-side redirect or performing some kind of client-side redirect, we can intercept this request at the CDN level closest to the user and direct it to the proper version of the site.
 
+### CloudFormation
+
+NOTE: This part is the update that is not done
+
+In the AWS console, search for CloudFormation.
+Click create stack
+Choose Template is Ready and Upload a Template and then choose the template file from the repo
+Click Next
+Name the stack "LaunchDarkly-Example" and click next
+On the configure stack options step, accept the defaults and click next
+Review the details and click "Create stack"
+wait for the stack to be created (this can take a few minutes)
+
 ### Setting Up an S3 Bucket with the Challenge Resources
 
 1. Search for S3 in the AWS console. Click the "Create bucket" button.

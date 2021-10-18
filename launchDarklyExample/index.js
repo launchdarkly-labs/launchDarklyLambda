@@ -1,5 +1,5 @@
 const LaunchDarkly = require("launchdarkly-node-server-sdk");
-const client = LaunchDarkly.init("sdk-my-key");
+const client = LaunchDarkly.init("sdk-my-sdk-key");
 
 exports.handler = async (event) => {
   const request = event.Records[0].cf.request;
