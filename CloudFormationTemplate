@@ -16,7 +16,13 @@
                 "WebsiteConfiguration": {
                     "IndexDocument": "index.html",
                     "ErrorDocument": "error.html"
-                }
+                },
+                "PublicAccessBlockConfiguration":{
+                    "BlockPublicAcls":false,
+                    "IgnorePublicAcls":false,
+                    "BlockPublicPolicy":false,
+                    "RestrictPublicBuckets":false
+                 }
             },
             "Metadata": {
                 "AWS::CloudFormation::Designer": {
