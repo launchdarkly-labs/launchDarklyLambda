@@ -1,44 +1,30 @@
 const LaunchDarkly = require("launchdarkly-node-server-sdk");
-const client = LaunchDarkly.init("sdk-my-sdk-key");
+const client = LaunchDarkly.init("sdk-c46b880d-5973-48ed-9f01-838029b10e99");
 
-exports.handler = async (event, context, callback) => {
-  const request = event.Records[0].cf.request;
-  const c = request.headers.host[0].value;
+exports.handler = async (event) => {
+  let URL =
+    "https://launchdarklydemostack1-s3bucketforwebsitecontent-jffmp2434grq.s3.amazonaws.com/site/";
 
-  // initialize LaunchDarkly and get the flag value
   await client.waitForInitialization();
-  const viewNewSite = await client.variation(
+  let viewBetaSite = await client.variation(
     "rebrand",
-    { key: request.clientIp },
+    { key: event.Records[0].cf.request.clientIp },
     false
   );
-  console.log(`LaunchDarkly returned "${viewNewSite}"`);
+  console.log(`LaunchDarkly returned ${viewBetaSite}`);
 
-  // if they aren't being redirected to the new site just return them to whatever they requested
-  // or if they are already on the beta site
-  if (!viewNewSite || request.url.includes("/beta")) {
-    return callback(null, request);
-    // otherwise redirect them to the beta site
-  } else {
-    let URL =
-      "http://" +
-      hostname +
-      "/beta" +
-      request.uri.replace("/beta", "") +
-      (request.querystring === "" ? "" : "?" + request.querystring);
-    const response = {
-      status: "301",
-      statusDescription: "Found",
-      headers: {
-        location: [
-          {
-            key: "Location",
-            value: URL,
-          },
-        ],
-      },
-    };
-
-    callback(null, response);
-  }
+  if (viewBetaSite) URL += "beta/index.html";
+  else URL += "index.html";
+  return {
+    status: "302",
+    statusDescription: "Found",
+    headers: {
+      location: [
+        {
+          key: "Location",
+          value: URL,
+        },
+      ],
+    },
+  };
 };
