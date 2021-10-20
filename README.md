@@ -19,18 +19,17 @@ Within AWS, we'll need to create two different resources to complete this challe
 
 ### CloudFormation
 
-NOTE: This part is the update that is not done
+To get started, we can use the CloudFormation template.
 
-In the AWS console, search for CloudFormation.
-Click create stack
-Choose Template is Ready and Upload a Template and then choose the template file from the repo
-Click Next
-Name the stack "LaunchDarkly-Example" and click next
-On the configure stack options step, accept the defaults and click next
-Review the details and click "Create stack"
-wait for the stack to be created (this can take a few minutes)
+1. In the AWS console, search for CloudFormation and then click the "Create stack" button.
+2. Choose the "Template is Ready" and "Upload a Template". Select the template file (`CloudFormationTemplate`) that you downloaded from this repository. Click Next.
+3. Name the stack (For example "LaunchDarkly-Challenge") and click next.
+4. On the "Configure stack options" step, accept all the defaults and click next.
+5. Review the details and click "Create stack". You'll have to wait for the stack to be created before continuing (this can take a few minutes).
 
-### Setting Up an S3 Bucket with the Challenge Resources
+You can optionally manually set up both the S3 bucket and CloudFront distribution. The instructions for both are below.
+
+### Manually Setting Up an S3 Bucket with the Challenge Resources
 
 1. Search for S3 in the AWS console. Click the "Create bucket" button.
 2. Give the bucket a name (for example, "launchdarkly-example"), choose US East as the AWS Region and turn off the "block public access" option.
@@ -38,17 +37,13 @@ wait for the stack to be created (this can take a few minutes)
 4. Select the `site` directory in your bucket and from the Actions pull down select "Make public", click to confirm and then click "Close"
 5. Click on the "Properties" tab for the S3 bucket. Scroll all the way down to "Static website hosting". Click "Edit" and then choose "Enable". Specify `index.html` as your index document and "Save changes".
 
-   ![Setting up static web hosting in AWS](aws-static-hosting.png)
-
    You should be able to click the bucket URL to view the page (be sure to append `/site` at the end of the URL). Take note of this URL as we'll need it later.
 
-### Setting Up the CloudFront distribution
+### Manually Setting Up the CloudFront distribution
 
 1. In the AWS Console, search for "CloudFront" and then click the button that reads "Create a CloudFront Distribution"
 
 2. For the "Origin domain" choose the S3 bucket we just created. Leave everything else with the default, scroll down and click "Create distribution"
-
-   ![Choosing our S3 bucket for our CloudFront distribution](aws-cloudfront-distribution.png)
 
 ## Creating a Lambda Function Connected to LaunchDarkly
 
@@ -56,22 +51,16 @@ wait for the stack to be created (this can take a few minutes)
 2. Click "Create function"
 3. Choose "Author from Scratch". Name the function "launchDarklyExample" and choose the Node.js runtime (which is the default). Everything else can also be left at the default. Click "Create Function".
 
-   ![Create a Lambda function from scratch](aws-create-lambda.png)
-
 Our function is created, so now let's move to VS Code.
 
 1. Create or open an empty project
 2. Click the AWS icon on the left (this is part of the [AWS Toolkit for Visual Studio Code](https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/setup.html))
 3. Choose Lambda and then find the "launchDarklyExample" we just created. Right-click on the function and select "Download". When prompted choose the current project folder.
 
-   ![Download our function in VS Code](aws-vscode-download.png)
-
 ### Install and Configure LaunchDarkly
 
 1. Open the command line in the current project folder (be sure you `cd` into the `launchDarklyExample` folder containing your lambda function)
 2. Run `npm install launchdarkly-node-server-sdk`
-
-   ![Installing the Node SDK](aws-vscode-terminal.png)
 
 3. Place the following code above the handler in `index.js`. Be sure to replace the `sdk-my-sdk-key` with your SDK key from your LaunchDarkly environment. You can get this via the "Account settings" within the LaunchDarkly dashboard:
 
@@ -102,22 +91,16 @@ Our function is created, so now let's move to VS Code.
 5. To update our Lambda function, including uploading the npm dependencies, open the AWS panel in VS Code. Right-click the function and select "Upload". When prompted, choose "Directory" and then select the directory that the Lambda function resides in. When it asks you whether to build with SAM, choose "No" to just upload the contents of the directory.
 6. To test the function, right-click on the function again and choose "Invoke on AWS". We do not need to provide any payload, just click the "invoke" button. The output panel should show a response `{"statusCode":200,"body":"\"Initialization successful\""}` showing that the SDK client properly initialized.
 
-   ![Our initialization was successful](aws-invoke-initialize.png)
-
 ### Creating a Flag in LaunchDarkly
 
 LaunchDarkly is now initialized, but we need a flag to respond to.
 
 1. Open the LaunchDarkly dashboard and select our project (the default project works fine) and environment (either the default "Test" or "Production" are fine, just be sure to change the flag in the same environment later) then click "Create flag".
-2. Name the flag "rebrand". We do not need a mobile or client side ID, so we can uncheck that. Choose a "String" variation.
-3. Variation 1 should be just "/site" make variation 2 will be "/site/beta"
+2. Name the flag "rebrand". We do not need a mobile or client side ID, so we can uncheck that. Choose a "Boolean" variation.
+3. Variation 1 should be true make variation 2 will be false. True will indicate that we should see the new site. False will indicate that we should continue to see the old site.
 4. Click "Save flag".
 
-   ![Creating a flag in LaunchDarkly](aws-create-flag.png)
-
 5. Once the flag is saved, scroll down to the "Default rule" and choose the "A percentage rollout" option. For the purposes of example, we'll just assign 50/50 but in a real world scenario you'd likely start smaller and increase over time.
-
-   ![Setting a percentage rollout](aws-percentage-rollout.png)
 
 6. Scroll back up and click save.
 7. Finally, turn targeting On and save again. If we don't turn targeting on, the percentage rollout is not running and you'll only ever get the default variation).
@@ -144,8 +127,6 @@ Now let's use our new flag within our function.
    ```
 2. Open the AWS panel. Right-click to upload and then, when the upload finishes, right click to invoke it again. You do not need a payload. You should receive a response like `{"statusCode":200,"body":"\"/site/beta\""}`.
 
-   ![response from our AWS Lambda test](aws-invoke-flag.png)
-
 ## Deploying Our Function to Lambda@Edge
 
 We've now successfully used this in a Lambda but we're not yet using Lambda@Edge. A function running on Lambda@Edge receives a specific [event structure](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-event-structure.html). We'll utilize this to specify a key for LaunchDarkly that will ensure that different users get different variations but the same user always end up in the same group (i.e. they don't see one site on one click and one site on another, which would be bad).
@@ -154,15 +135,20 @@ Let's update our function to use this event. The following code gets the value o
 
 ```javascript
 exports.handler = async (event) => {
-  const s3url =
-    "http://launchdarkly-example.s3-website-us-east-1.amazonaws.com";
+  // place your S3 bucket URL here -- don't forget to add /site/
+  let URL =
+    "https://launchdarklydemostack1-s3bucketforwebsitecontent-jffmp2434grq.s3.amazonaws.com/site/";
 
   await client.waitForInitialization();
-  let landingPage = await client.variation(
+  let viewBetaSite = await client.variation(
     "rebrand",
     { key: event.Records[0].cf.request.clientIp },
     false
   );
+  console.log(`LaunchDarkly returned ${viewBetaSite}`);
+
+  if (viewBetaSite) URL += "beta/index.html";
+  else URL += "index.html";
   return {
     status: "302",
     statusDescription: "Found",
@@ -170,7 +156,7 @@ exports.handler = async (event) => {
       location: [
         {
           key: "Location",
-          value: s3url + landingPage,
+          value: URL,
         },
       ],
     },
@@ -192,14 +178,12 @@ In order to test the function, we'll need to provide a payload that represents t
     "location": [
       {
         "key": "Location",
-        "value": "http://launchdarkly-example.s3-website-us-east-1.amazonaws.com/site/beta"
+        "value": "https://launchdarklydemostack1-s3bucketforwebsitecontent-jffmp2434grq.s3.amazonaws.com/site/beta/"
       }
     ]
   }
 }
 ```
-
-![Invoking the Lambda with a sample payload](aws-invoke-lambda-edge.png)
 
 Try changing the IP address in the payload and clicking invoke again. You should get a different response in most cases as it's split 50/50 (though you may need to change the IP more than once try again as the ultimate percentage breakdown will be 50/50 but that doesn't mean each request is alternated).
 
@@ -216,15 +200,13 @@ In the "Existing Role" dropdown, select "service-role/lambdaEdge". You don't nee
 Now we're ready to enable the trigger.
 
 1. Open your Lambda Function and click the "Add trigger" button.
-2. In "Select a trigger" dropdown search for "CloudFront" and then click the button to "Deploy to Lambda@Edge". Accept the defaults and click "Deploy".
+2. In "Select a trigger" dropdown search for "CloudFront" and then click the button to "Deploy to Lambda@Edge". Change the CloudFront event to "Viewer request". This ensures that the Lambda will execute on every request before the cache is checked. If we used "Origin request", the cache would be checked and flag changes after the initial run would pull from this cache, missing any changes to the flag status. Otherwise, accept the defaults and click "Deploy".
 
-   ![Adding a CloudFront trigger](aws-lambda-add-trigger.png)
+3. Click deploy. You will likely get asked to select the trigger again, be sure that both times you choose the "Origin request" option while leaving the rest as default values.
 
-3. When configuring the CloudFront trigger, all of the defaults are ok. Click deploy (note that you may be asked to do this twice, just accept the defaults both times).
+Finally, let's test that this actually works. Click the "CloudFront" box within the "Function Overview". This should open the Configuration > Triggers settings. Click the link next to the CloudFront trigger that has our CloudFront distribution ID. This will open up the CloudFront distribution in a new tab. Open the CloudFront distribution and under the "Details" section, copy the URL for this CloudFront distribution. If we paste this URL in the browser (be sure the CloudFront distribution has finished deploying first), it should direct us to either the old version of the page or the new one.
 
-![Our trigger is deployed](aws-lambda-cloudfront-trigger.png)
-
-Finally, let's test that this actually works. Click the "CloudFront" box within the "Function Overview". This should open the Configuration > Triggers settings. Click the link next to the CloudFront trigger that has our CloudFront distribution ID. This will open up the CloudFront distribution in a new tab. Open the CloudFront distribution and under the "Details" section, copy the URL for this CloudFront distribution. If we paste this URL in the browser (be sure the CloudFront distribution has finished deploying first), it should direct us to either the old version of the page or the new one. (Note that if you're assigned to the old site but want to see the new one, just append `/beta` to the URL you are redirected to).
+If you are assigned to the old site but want to see the new site, or want to test what the full rollout would look like, go to your LaunchDarkly dashboard, open the "rebrand" flag and under "Default rule" change it from serving a percentage rollout to just serving true. Save the changes to your flag and go to the CloudFront domain again and you should be directed to the beta site.
 
 Congrats! You've completed the challenge. If you need to cleanup your environment, follow the instructions below.
 

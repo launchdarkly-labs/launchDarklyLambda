@@ -2,6 +2,7 @@ const LaunchDarkly = require("launchdarkly-node-server-sdk");
 const client = LaunchDarkly.init("sdk-my-sdk-key");
 
 exports.handler = async (event) => {
+  // place your S3 bucket URL here -- don't forget to add /site/
   let URL =
     "https://launchdarklydemostack1-s3bucketforwebsitecontent-jffmp2434grq.s3.amazonaws.com/site/";
 
