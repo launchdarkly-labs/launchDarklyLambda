@@ -26,6 +26,9 @@ To get started, we can use the CloudFormation template.
 3. Name the stack (For example "LaunchDarkly-Challenge") and click next.
 4. On the "Configure stack options" step, accept all the defaults and click next.
 5. Review the details and click "Create stack". You'll have to wait for the stack to be created before continuing (this can take a few minutes).
+6. Once the S3 bucket is ready, search for S3 in the AWS console and locate the bucket we just created.
+7. Click **Upload** and then **Add folder**. From the [source repository](https://github.com/remotesynth/launchDarklyLambda), upload the `/site` folder containing the both the existing site's `index.html` and `logo.png` and a `/beta` folder containing the new site (Note that to simplify these steps, we're uploading everything into a folder rather than into the root of the bucket, but this means that the URLs will all have to have the `/site` folder appended). Click "Upload" and when it's done click "Close"
+8. Select the `site` directory in your bucket. From the Actions pull down select "Make public", click to confirm and then click "Close"
 
 You can optionally manually set up both the S3 bucket and CloudFront distribution. The instructions for both are below.
 
@@ -116,22 +119,22 @@ Now let's use our new flag within our function.
        statusCode: 200,
      };
      await client.waitForInitialization();
-     let landingPage = await client.variation(
+     let viewBetaSite = await client.variation(
        "rebrand",
        { key: "brinaldi@launchdarkly.com" },
        false
      );
-     response.body = JSON.stringify(landingPage);
+     response.body = JSON.stringify(viewBetaSite);
      return response;
    };
    ```
-2. Open the AWS panel. Right-click to upload and then, when the upload finishes, right click to invoke it again. You do not need a payload. You should receive a response like `{"statusCode":200,"body":"\"/site/beta\""}`.
+2. Open the AWS panel. Right-click to upload and then, when the upload finishes, right click to invoke it again. You do not need a payload. You should receive a response like `{"statusCode":200,"body":"true"}`.
 
 ## Deploying Our Function to Lambda@Edge
 
 We've now successfully used this in a Lambda but we're not yet using Lambda@Edge. A function running on Lambda@Edge receives a specific [event structure](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-event-structure.html). We'll utilize this to specify a key for LaunchDarkly that will ensure that different users get different variations but the same user always end up in the same group (i.e. they don't see one site on one click and one site on another, which would be bad).
 
-Let's update our function to use this event. The following code gets the value of the flag and appends that to the URL for our site, so that you'll either be directed to the existing site or to a `/beta` version of the site (note that a more complete solution wouldn't just append the beta but redirect users to the page they requested on the new site using the URI passed in the event, however our site only has one page). It uses the IP address of the user as the key since it is the only indentifying information we will always have available for the user. Subsequent visits from that IP will not get different results from the flag (i.e. they'll continue to see the same version of the site).
+Let's update our function to use this event. The following code gets the value of the flag and, if the value is true, it redirects them to the beta site. Otherwise, if the value is false, it redirects them to the original site. Amore complete solution would take into account the URI that was requested and redirect them to the appropriate URI on either the beta or main site, but, for the sake of example, we'll keep it simple. It uses the IP address of the user as the key since it is the only indentifying information we always have available for the user. Subsequent visits from that IP will not get different results from the flag (i.e. they'll continue to see the same version of the site).
 
 ```javascript
 exports.handler = async (event) => {
